@@ -3,6 +3,10 @@
 This module provides the MCP tool interface for the iterative retrieval controller.
 It uses the Phase 2/3 IterativeController with hypothetical reasoning and explicit outcomes.
 
+Supports two controller modes:
+1. IterativeController (default): Procedural loop-based retrieval
+2. GraphBasedController: LangGraph state machine (optional, requires langgraph)
+
 Backward Compatibility:
 - Tool name and schema unchanged
 - Output format extended with outcome fields
@@ -20,7 +24,7 @@ def adaptive_retrieve(
 ) -> dict[str, Any]:
     """Execute adaptive retrieval loop for a query.
     
-    Uses the new IterativeController which includes:
+    Uses the IterativeController (or GraphBasedController if requested) which includes:
     - Policy-driven retrieval decisions
     - Iterative retrieve → rerank → score loops
     - HyDE-style hypothetical reasoning (gated fallback)
@@ -30,6 +34,7 @@ def adaptive_retrieve(
         query: User query to answer (required)
         max_iterations: Maximum retry attempts (default 3)
         confidence_threshold: Score threshold to stop early (default 0.6)
+        use_graph_controller: Use LangGraph state machine (default False)
         
     Output:
         results: List of retrieved results
@@ -45,6 +50,7 @@ def adaptive_retrieve(
     query = input_data.get("query", "")
     max_iters = input_data.get("max_iterations", 3)
     threshold = input_data.get("confidence_threshold", 0.6)
+    use_graph = input_data.get("use_graph_controller", False)
     
     if not query:
         return {
@@ -63,7 +69,21 @@ def adaptive_retrieve(
         }
     
     try:
-        # Use the new iterative controller
+        # Choose controller based on feature flag
+        if use_graph:
+            # Use LangGraph state machine controller
+            from src.retrieval.graph_controller import get_graph_controller
+            from src.retrieval.iterative_controller import OutcomeType
+            
+            logger.info("using_graph_controller", query_length=len(query))
+            
+            controller = get_graph_controller()
+            state = controller.retrieve(query, max_iterations=max_iters)
+            
+            # Convert state to response format
+            return _convert_graph_state_to_response(state)
+        
+        # Default: Use the iterative controller
         from src.retrieval.iterative_controller import (
             IterativeController,
             OutcomeType,
@@ -160,6 +180,52 @@ def adaptive_retrieve(
                 "confidence_level": "low",
             }
         }
+
+
+def _convert_graph_state_to_response(state: dict) -> dict:
+    """Convert LangGraph state to standard response format.
+    
+    Ensures backward compatibility when using graph controller.
+    """
+    is_confident = state.get("is_confident", False)
+    stop_reason = state.get("stop_reason", "unknown")
+    results = state.get("reranked_results", [])
+    
+    # Map confidence to outcome type
+    if is_confident and results:
+        outcome_type = "answer_ready"
+        confidence_level = "high"
+    elif results:
+        outcome_type = "partial_answer"
+        confidence_level = "medium"
+    else:
+        outcome_type = "insufficient_evidence"
+        confidence_level = "low"
+    
+    return {
+        "results": results,
+        "trace": [
+            {
+                "step": state.get("iteration", 1),
+                "strategy": state.get("retrieval_mode", "hybrid"),
+                "count": len(state.get("retrieved_docs", [])),
+                "score": state.get("confidence_score", 0.0),
+                "confident": is_confident,
+                "used_hypothetical": False,
+            }
+        ],
+        "final_status": {
+            "success": outcome_type in ("answer_ready", "partial_answer"),
+            "reason": stop_reason,
+            "iterations": state.get("iteration", 1),
+        },
+        "outcome": {
+            "type": outcome_type,
+            "explanation": f"Graph controller completed with: {stop_reason}",
+            "confidence_level": confidence_level,
+        },
+        "controller_type": "graph",
+    }
 
 
 # Registry

@@ -7,6 +7,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "adaptive_retrieve": {
         "name": "adaptive_retrieve",
         "description": "Iteratively retrieves and refines results to find high-quality documents.",
+        "category": "retrieval",
+        "complexity": "complex",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -75,6 +77,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "decide_retrieval": {
         "name": "decide_retrieval",
         "description": "Analyzes a query to determine optimal retrieval strategy. Returns recommendation only - does not execute retrieval.",
+        "category": "retrieval",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -121,6 +125,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "embed_query": {
         "name": "embed_query",
         "description": "Generates vector embedding for a query or text passage. Use before calling search.",
+        "category": "retrieval",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -154,6 +160,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "search": {
         "name": "search",
         "description": "Performs similarity search in a collection. Supports dense (vector), sparse (BM25), or hybrid modes.",
+        "category": "retrieval",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -235,6 +243,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "rerank": {
         "name": "rerank",
         "description": "Re-ranks documents by relevance to query using cross-encoder. Returns quality signals for evidence assessment.",
+        "category": "retrieval",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -318,6 +328,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "summarize": {
         "name": "summarize",
         "description": "Generates a summary from provided context. Does NOT retrieve - context must be supplied.",
+        "category": "generation",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -367,6 +379,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "cite": {
         "name": "cite",
         "description": "Generates a response with inline citations to source documents.",
+        "category": "generation",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -431,6 +445,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "compare_documents": {
         "name": "compare_documents",
         "description": "Compares multiple documents, identifying similarities, differences, and conflicts.",
+        "category": "analysis",
+        "complexity": "complex",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -525,6 +541,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "generate_response": {
         "name": "generate_response",
         "description": "Generates a natural language response to a query using provided context.",
+        "category": "generation",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -577,6 +595,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "ingest_document": {
         "name": "ingest_document",
         "description": "Ingest a document from file path or raw text. Chunks and stores for retrieval.",
+        "category": "ingestion",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -621,6 +641,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "list_documents": {
         "name": "list_documents",
         "description": "List all ingested documents.",
+        "category": "ingestion",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {},
@@ -639,6 +661,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "get_document_chunks": {
         "name": "get_document_chunks",
         "description": "Get all chunks for a specific document.",
+        "category": "ingestion",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -663,6 +687,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "delete_document": {
         "name": "delete_document",
         "description": "Delete a document and all its chunks.",
+        "category": "ingestion",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -687,6 +713,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "get_ingestion_stats": {
         "name": "get_ingestion_stats",
         "description": "Get statistics about ingested documents and chunks.",
+        "category": "ingestion",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {},
@@ -708,6 +736,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "index_document": {
         "name": "index_document",
         "description": "Index an ingested document for vector search. Run after ingest_document.",
+        "category": "retrieval",
+        "complexity": "moderate",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -733,6 +763,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "get_retrieval_stats": {
         "name": "get_retrieval_stats",
         "description": "Get statistics about the vector index.",
+        "category": "retrieval",
+        "complexity": "simple",
         "inputSchema": {
             "type": "object",
             "properties": {},

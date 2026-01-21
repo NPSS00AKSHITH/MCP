@@ -124,13 +124,36 @@ def execute_tool(tool_name: str, input_data: dict[str, Any]) -> dict[str, Any]:
         raise ToolExecutionError(f"Tool execution failed: {e}") from e
 
 
-def list_tools() -> list[dict[str, Any]]:
+def list_tools(query_context: str | None = None, top_k: int = 5) -> list[dict[str, Any]]:
     """
-    List all available tools with their schemas.
+    List available tools with their schemas, optionally filtered by query context.
     
+    Uses TURA-style semantic discovery when query_context is provided.
+    This prevents "prompt bloat" by only loading relevant tools per query.
+    
+    Args:
+        query_context: Optional query to filter tools semantically.
+        top_k: Number of tools to return when filtering (default: 5).
+        
     Returns:
         List of tool definitions
     """
+    if query_context:
+        # TURA-style: only return relevant tools
+        from src.policy.tool_discovery import get_tool_registry
+        registry = get_tool_registry()
+        relevant_tool_names = registry.discover_tools(query_context, top_k=top_k)
+        return [
+            {
+                "name": name,
+                "description": TOOL_SCHEMAS[name]["description"],
+                "inputSchema": TOOL_SCHEMAS[name]["inputSchema"],
+            }
+            for name in relevant_tool_names
+            if name in TOOL_SCHEMAS
+        ]
+    
+    # No context: return all (backward compatible)
     return [
         {
             "name": name,

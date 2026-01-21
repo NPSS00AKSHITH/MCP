@@ -163,6 +163,49 @@ async def get_tool_schema(
     return TOOL_SCHEMAS[tool_name]
 
 
+# Feedback endpoint for adaptive learning
+class FeedbackRequest(BaseModel):
+    """Request body for recording feedback."""
+    chunk_id: str
+    query: str
+    query_type: str = "unknown"
+    accepted: bool
+    original_score: float = 0.0
+
+
+@app.post("/feedback")
+async def record_feedback(
+    feedback: FeedbackRequest,
+    api_key: str = Depends(verify_api_key),
+):
+    """Record user feedback for adaptive learning.
+    
+    This endpoint records whether a retrieved chunk was helpful,
+    allowing the adaptive memory system to improve over time.
+    """
+    from src.retrieval.adaptive_memory import get_adaptive_memory
+    
+    memory = get_adaptive_memory()
+    memory.record_feedback(
+        chunk_id=feedback.chunk_id,
+        query=feedback.query,
+        query_type=feedback.query_type,
+        accepted=feedback.accepted,
+        original_score=feedback.original_score,
+    )
+    
+    return {"status": "recorded", "chunk_id": feedback.chunk_id}
+
+
+@app.get("/memory/stats")
+async def get_memory_stats(api_key: str = Depends(verify_api_key)):
+    """Get adaptive memory statistics."""
+    from src.retrieval.adaptive_memory import get_adaptive_memory
+    
+    memory = get_adaptive_memory()
+    return memory.get_stats()
+
+
 def main():
     """Run the server."""
     settings = get_settings()

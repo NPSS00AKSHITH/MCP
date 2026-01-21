@@ -1,4 +1,8 @@
-"""Reranking tool implementation for MCP server."""
+"""Reranking tool implementation for MCP server.
+
+Supports both standard reranking and adaptive memory-augmented reranking
+that learns from user feedback to improve results over time.
+"""
 
 from typing import Any
 
@@ -8,12 +12,18 @@ from src.retrieval.reranker import get_reranker, RERANKERS
 def rerank(input_data: dict[str, Any]) -> dict[str, Any]:
     """Rerank documents by relevance to query.
     
+    Supports two modes:
+    1. Standard mode (default): Uses cross-encoder for reranking
+    2. Adaptive mode: Uses memory-augmented reranking that learns from feedback
+    
     Input:
         query: The query to rank against
         documents: List of {id, content} dicts to rerank
         top_k: Optional limit on results
         model: Reranker type ("cross-encoder" or "simple")
         threshold: Relevance threshold for quality signals (default 0.3)
+        query_type: Optional query classification (for adaptive mode)
+        use_adaptive_memory: Enable memory-augmented reranking (default False)
         
     Output:
         results: Reranked list with relevance_score and original_rank
@@ -25,6 +35,8 @@ def rerank(input_data: dict[str, Any]) -> dict[str, Any]:
     top_k = input_data.get("top_k")
     model_type = input_data.get("model", "cross-encoder")
     threshold = input_data.get("threshold", 0.3)
+    query_type = input_data.get("query_type")
+    use_adaptive = input_data.get("use_adaptive_memory", False)
     
     if not query:
         return {
@@ -50,13 +62,27 @@ def rerank(input_data: dict[str, Any]) -> dict[str, Any]:
             "error": None,
         }
     
-    # Get or create reranker
-    reranker = get_reranker(model_type)
-    if hasattr(reranker, "relevance_threshold"):
-        reranker.relevance_threshold = threshold
-    
-    # Rerank
-    results, quality = reranker.rerank(query, documents, top_k=top_k)
+    # Choose reranker based on mode
+    if use_adaptive:
+        # Use adaptive memory ranker for learning from feedback
+        from src.retrieval.adaptive_memory import get_adaptive_memory
+        
+        memory = get_adaptive_memory()
+        results, quality = memory.rerank_with_memory(
+            query=query,
+            documents=documents,
+            query_type=query_type,
+            top_k=top_k,
+        )
+        model_name = f"adaptive-{model_type}"
+    else:
+        # Standard reranking (backward compatible)
+        reranker = get_reranker(model_type)
+        if hasattr(reranker, "relevance_threshold"):
+            reranker.relevance_threshold = threshold
+        
+        results, quality = reranker.rerank(query, documents, top_k=top_k)
+        model_name = reranker.model_name
     
     return {
         "results": [
@@ -70,7 +96,8 @@ def rerank(input_data: dict[str, Any]) -> dict[str, Any]:
             for r in results
         ],
         "quality_signals": quality.to_dict(),
-        "model_used": reranker.model_name,
+        "model_used": model_name,
+        "adaptive_mode": use_adaptive,
         "metadata": {
             "query_length": len(query),
             "documents_evaluated": len(documents),
@@ -82,3 +109,4 @@ def rerank(input_data: dict[str, Any]) -> dict[str, Any]:
 RERANK_TOOLS: dict[str, callable] = {
     "rerank": rerank,
 }
+
