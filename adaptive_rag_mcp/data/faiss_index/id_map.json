@@ -1,0 +1,1 @@
+[{"chunk_id": "rag_test_0000_81a5f666", "doc_id": "rag_test", "content": "RAG combines retrieval with generation for grounded AI responses. It uses vector embeddings for semantic search.", "metadata": {"char_count": 112, "word_count": 16}}]
