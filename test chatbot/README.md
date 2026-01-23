@@ -52,7 +52,7 @@ docker ps | grep adaptive-rag-server
 ```bash
 cd "D:\MCP\test chatbot"
 .venv\Scripts\activate.ps1
-python chatbot.py
+python src/chatbot.py
 ```
 
 ---
@@ -63,7 +63,7 @@ python chatbot.py
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `/load <path>` | Load PDF into knowledge base | `/load document.pdf` |
+| `/load <path>` | Load PDF into knowledge base | `/load data/document.pdf` |
 | `/list` | List all loaded documents | `/list` |
 | `/stats` | Show ingestion statistics | `/stats` |
 | `/help` | Display help message | `/help` |
@@ -83,7 +83,7 @@ You: What are the types of machine learning?
 
 ```
 ┌─────────────────────────────────────────┐
-│  Chatbot (chatbot.py)                   │
+│  Chatbot (src/chatbot.py)               │
 │  • Gemini 2.5 Flash for Q&A             │
 │  • Client-side PDF extraction (pypdf)   │
 │  • HTTP client for MCP communication    │
@@ -115,14 +115,14 @@ You: What are the types of machine learning?
 ### Generate Sample PDF
 
 ```bash
-python generate_sample_pdf.py
-# Creates: machine_learning_basics.pdf
+python scripts/generate_sample_pdf.py
+# Creates: data/machine_learning_basics.pdf
 ```
 
 ### Test Workflow
 
 ```
-You: /load machine_learning_basics.pdf
+You: /load data/machine_learning_basics.pdf
 ✅ Loaded! Doc ID: machine_learning_basics.pdf, Chunks: 2
 
 You: What are the three types of machine learning?
@@ -132,7 +132,7 @@ You: /stats
 📊 Docs: 1, Chunks: 2
 ```
 
-See [`TEST_RESULTS.md`](TEST_RESULTS.md) for comprehensive test results.
+See [`TEST_RESULTS.md`](docs/TEST_RESULTS.md) for comprehensive test results.
 
 ---
 
@@ -140,14 +140,18 @@ See [`TEST_RESULTS.md`](TEST_RESULTS.md) for comprehensive test results.
 
 ```
 test chatbot/
-├── chatbot.py                    # Main chatbot application
-├── generate_sample_pdf.py        # PDF generator for testing
-├── verify_search.py              # MCP search verification script
-├── debug_server.py               # Server debugging utility
+├── src/
+│   └── chatbot.py                # Main chatbot application
+├── scripts/
+│   ├── generate_sample_pdf.py    # PDF generator for testing
+│   ├── verify_search.py          # MCP search verification script
+│   └── debug_server.py           # Server debugging utility
+├── data/                         # Data files (PDFs, TXT)
+│   └── machine_learning_basics.pdf
+├── docs/                         # Documentation
+│   └── TEST_RESULTS.md           # Test validation report
 ├── .env                          # Environment variables
-├── pyproject.toml                # Project dependencies
-├── TEST_RESULTS.md               # Test validation report
-└── machine_learning_basics.pdf   # Sample PDF (generated)
+└── pyproject.toml                # Project dependencies
 ```
 
 ---
