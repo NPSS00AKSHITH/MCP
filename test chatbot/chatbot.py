@@ -30,7 +30,7 @@ if not all([ADAPTIVE_RAG_API_KEY, GEMINI_API_KEY]):
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 
 class MCPClient:
