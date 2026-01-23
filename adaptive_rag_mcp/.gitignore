@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Logs and reports (generated files)
+*.log
+reports/
+*.log.*
+
+# Data (keep structure, ignore contents)
+data/test/
+data/*.db
+data/faiss_index/
+data/bm25_index/
+data/hybrid_test_*/
+
+# Build
+*.whl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DeepEval
+.deepeval/
+
+# Skills (external)
+skills/
+
+# Lock files (optional - uncomment if you want to track)
+# uv.lock

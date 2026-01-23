@@ -56,18 +56,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Get settings for middleware configuration
+_settings = get_settings()
+
 # Add Middleware
-app.add_middleware(RateLimitMiddleware, limit=100, window=60)
+app.add_middleware(
+    RateLimitMiddleware,
+    limit=_settings.rate_limit_requests,
+    window=_settings.rate_limit_window_seconds,
+)
 app.add_middleware(ContextMiddleware)
 
 
-# CORS middleware
+# CORS middleware - uses secure settings from config
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_settings.effective_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],  # Restrict to used methods
+    allow_headers=["X-API-Key", "Content-Type", "Accept"],  # Restrict headers
 )
 
 
@@ -134,17 +141,17 @@ async def call_tool(
     except ToolNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail=e.to_dict(),
         )
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e),
+            detail=e.to_dict(),
         )
     except ToolExecutionError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            detail=e.to_dict(),
         )
 
 

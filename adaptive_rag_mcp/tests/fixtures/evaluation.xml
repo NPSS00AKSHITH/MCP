@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+MCP Server Evaluation Suite for Adaptive RAG MCP
+
+These questions test whether LLMs can effectively use the RAG tools
+to accomplish realistic document retrieval and generation tasks.
+
+Guidelines:
+- All questions are READ-ONLY (no destructive operations)
+- Each question requires multiple tool calls
+- Answers are verifiable via direct string comparison
+- Questions test different aspects of the RAG pipeline
+-->
+<evaluation>
+    <qa_pair>
+        <question>Use the decide_retrieval tool to analyze the query "What are the main security considerations for production deployment?" and report the recommended strategy. Answer with one of: none, single, multi_step, or hybrid.</question>
+        <answer>hybrid</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>First use list_documents to check how many documents are ingested, then use get_ingestion_stats to get the total chunk count. What is the ratio of chunks to documents (rounded to nearest integer)? If no documents exist, answer "0".</question>
+        <answer>0</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use the search tool with mode "hybrid" and query "authentication best practices" with k=3. Report the mode field from the response. Answer exactly as returned.</question>
+        <answer>hybrid</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Call get_retrieval_stats and report the embedder_model value. Answer with the exact model name string.</question>
+        <answer>all-MiniLM-L6-v2</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use the rerank tool with query "rate limiting implementation" on these documents: [{"id": "doc1", "content": "Rate limiting prevents abuse by restricting request frequency"}, {"id": "doc2", "content": "The weather is sunny today"}]. Which document ID has the higher relevance_score?</question>
+        <answer>doc1</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use the summarize tool with style "bullet_points" on this context: [{"content": "The MCP server uses API key authentication. Keys are validated on each request."}]. Does the response contain the word "authentication"? Answer True or False.</question>
+        <answer>True</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Call the cite tool with query "How does authentication work?" and sources: [{"id": "src1", "content": "API keys are passed via X-API-Key header", "title": "Auth Guide"}]. How many citations are in the response? Answer with a number.</question>
+        <answer>1</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use compare_documents with two documents: [{"id": "a", "content": "Python is dynamically typed"}, {"id": "b", "content": "Python uses runtime type checking"}]. Are there any conflicts detected? Answer True or False.</question>
+        <answer>False</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use adaptive_retrieve with query "vector search implementation" and max_iterations=1. What is the reason field in the final_status? Answer with the exact string.</question>
+        <answer>max_iterations_reached</answer>
+    </qa_pair>
+    
+    <qa_pair>
+        <question>Use embed_query to embed the text "production deployment checklist". How many dimensions does the resulting embedding have? Answer with a number.</question>
+        <answer>384</answer>
+    </qa_pair>
+</evaluation>

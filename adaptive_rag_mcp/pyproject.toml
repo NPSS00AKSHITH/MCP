@@ -29,6 +29,14 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
     "httpx>=0.26.0",
+    # Code quality tools
+    "black>=24.0.0",
+    "isort>=5.13.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+    # MCP evaluation
+    "anthropic>=0.18.0",
+    "mcp>=1.0.0",
 ]
 
 [build-system]
@@ -41,3 +49,57 @@ packages = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+# Code Quality Configuration
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.venv
+    | __pycache__
+    | \.pytest_cache
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["src"]
+skip = [".venv", "__pycache__"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = ["E501"]  # Line too long (handled by black)
+exclude = [".venv", "__pycache__", ".pytest_cache"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+exclude = [".venv", "__pycache__"]
+
+[[tool.mypy.overrides]]
+module = [
+    "sentence_transformers.*",
+    "faiss.*",
+    "rank_bm25.*",
+    "google.generativeai.*",
+]
+ignore_missing_imports = true

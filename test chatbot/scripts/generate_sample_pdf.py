@@ -5,7 +5,7 @@ from reportlab.lib.units import inch
 
 def create_sample_pdf():
     """Create a sample PDF about Machine Learning."""
-    pdf_path = "machine_learning_basics.pdf"
+    pdf_path = "data/machine_learning_basics.pdf"
     c = canvas.Canvas(pdf_path, pagesize=letter)
     width, height = letter
     

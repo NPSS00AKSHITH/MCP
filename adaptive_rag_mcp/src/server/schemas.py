@@ -1,14 +1,97 @@
-"""JSON Schemas for MCP tools - derived from Phase 0 contract."""
+"""JSON Schemas for MCP tools - derived from Phase 0 contract.
+
+Enhanced with:
+- Tool annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint)
+- Response format options (JSON/Markdown)
+- Pagination support for list endpoints
+"""
 
 from typing import Any
 
-# Tool schemas registry
+# ============================================================================
+# Common Schema Components (per MCP Best Practices)
+# ============================================================================
+
+# Pagination input schema component
+PAGINATION_INPUT = {
+    "limit": {
+        "type": "integer",
+        "description": "Maximum number of results to return (1-100)",
+        "default": 20,
+        "minimum": 1,
+        "maximum": 100,
+    },
+    "offset": {
+        "type": "integer",
+        "description": "Number of results to skip for pagination",
+        "default": 0,
+        "minimum": 0,
+    },
+}
+
+# Pagination output schema component
+PAGINATION_OUTPUT = {
+    "type": "object",
+    "properties": {
+        "total": {"type": "integer", "description": "Total number of items available"},
+        "count": {"type": "integer", "description": "Number of items in this response"},
+        "offset": {"type": "integer", "description": "Current offset"},
+        "has_more": {"type": "boolean", "description": "Whether more items are available"},
+        "next_offset": {"type": ["integer", "null"], "description": "Offset for next page, null if no more"},
+    },
+    "required": ["total", "count", "has_more"],
+}
+
+# Response format input schema component
+RESPONSE_FORMAT_INPUT = {
+    "response_format": {
+        "type": "string",
+        "enum": ["json", "markdown"],
+        "default": "json",
+        "description": "Output format: 'json' for machine-readable or 'markdown' for human-readable",
+    },
+}
+
+# Standard tool annotations
+ANNOTATIONS_READ_ONLY = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
+ANNOTATIONS_WRITE = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+}
+
+ANNOTATIONS_DELETE = {
+    "readOnlyHint": False,
+    "destructiveHint": True,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
+ANNOTATIONS_EXTERNAL = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": True,  # Interacts with LLM
+}
+
+
+# ============================================================================
+# Tool Schemas Registry
+# ============================================================================
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     "adaptive_retrieve": {
         "name": "adaptive_retrieve",
-        "description": "Iteratively retrieves and refines results to find high-quality documents.",
+        "description": "Iteratively retrieves and refines results to find high-quality documents. Use when you need comprehensive search with automatic query refinement.",
         "category": "retrieval",
         "complexity": "complex",
+        "annotations": ANNOTATIONS_READ_ONLY,
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -640,21 +723,37 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
     
     "list_documents": {
         "name": "list_documents",
-        "description": "List all ingested documents.",
+        "description": "List all ingested documents with pagination. Returns document metadata including IDs, names, and chunk counts.",
         "category": "ingestion",
         "complexity": "simple",
+        "annotations": ANNOTATIONS_READ_ONLY,
         "inputSchema": {
             "type": "object",
-            "properties": {},
+            "properties": {
+                **PAGINATION_INPUT,
+                **RESPONSE_FORMAT_INPUT,
+            },
             "required": []
         },
         "outputSchema": {
             "type": "object",
             "properties": {
-                "documents": {"type": "array"},
-                "total": {"type": "integer"}
+                "documents": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "doc_id": {"type": "string"},
+                            "file_name": {"type": "string"},
+                            "file_type": {"type": "string"},
+                            "chunk_count": {"type": "integer"},
+                            "created_at": {"type": "string"},
+                        }
+                    }
+                },
+                "pagination": PAGINATION_OUTPUT,
             },
-            "required": ["documents", "total"]
+            "required": ["documents", "pagination"]
         }
     },
     
