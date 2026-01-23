@@ -187,6 +187,92 @@ curl -X POST http://localhost:8000/tools/rerank \
 - **`403 Forbidden`**: Check that the `X-API-Key` header in your request matches the `ADAPTIVE_RAG_API_KEY` in your `.env` file.
 - **Port Conflict**: If port 8000 is in use, change the `PORT` variable in `.env`.
 
+## Production-Grade Features
+
+This server follows [MCP Best Practices](https://modelcontextprotocol.io/) for production deployments:
+
+### Tool Annotations
+
+All tools include MCP annotations to help clients understand tool behavior:
+
+| Annotation | Description |
+|------------|-------------|
+| `readOnlyHint` | Tool does not modify state |
+| `destructiveHint` | Tool may perform destructive operations |
+| `idempotentHint` | Repeated calls have no additional effect |
+| `openWorldHint` | Tool interacts with external services |
+
+### Security Configuration
+
+```ini
+# .env security settings
+ENVIRONMENT=production              # Enable production mode
+ADAPTIVE_RAG_API_KEY=<secure-key>  # MUST change from default!
+HOST=127.0.0.1                      # Bind to localhost (safer)
+CORS_ALLOW_ALL=false                # Restrict CORS origins
+CORS_ORIGINS=["https://your-app.com"]
+```
+
+### Pagination
+
+List endpoints support pagination:
+
+```bash
+curl -X POST http://localhost:8000/tools/list_documents \
+  -H "X-API-Key: your-key" \
+  -d '{"limit": 20, "offset": 0}'
+```
+
+Response includes pagination metadata:
+```json
+{
+  "documents": [...],
+  "pagination": {
+    "total": 150,
+    "count": 20,
+    "offset": 0,
+    "has_more": true,
+    "next_offset": 20
+  }
+}
+```
+
+### Enhanced Error Responses
+
+Errors include actionable suggestions:
+
+```json
+{
+  "error_code": "TOOL_NOT_FOUND",
+  "message": "Tool 'serch' not found",
+  "suggestion": "Did you mean: search? Use GET /tools to list all available tools.",
+  "details": {"requested_tool": "serch"}
+}
+```
+
+### Code Quality
+
+Install dev dependencies and run quality checks:
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run code quality checks
+black --check src/ tests/
+isort --check-only src/ tests/
+ruff check src/ tests/
+mypy src/
+```
+
+### MCP Evaluation Suite
+
+Test the server's LLM effectiveness:
+
+```bash
+python scripts/run_evaluation.py tests/evaluation.xml -u http://localhost:8000
+```
+
 
 ## Deployment & Remote Usage
 
