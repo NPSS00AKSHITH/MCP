@@ -1,319 +1,243 @@
-# Adaptive RAG MCP Server
+# Adaptive RAG MCP – Production Grade Model Context Protocol Server
 
-A production-grade **Retrieval-Augmented Generation (RAG)** server exposed via the **Model Context Protocol (MCP)**. This server enables advanced RAG capabilities for LLMs, including graph-based retrieval, adaptive memory, and parallel task planning.
+## 🚀 Overview
 
-## Features
+**Adaptive RAG MCP** is a production-grade implementation of the Model Context Protocol (MCP) designed to bridge Large Language Models (LLMs) with dynamic, high-fidelity context using **Adaptive Retrieval-Augmented Generation (RAG)**.
 
-- **Document Ingestion**: PDF, Markdown, and text files with recursive chunking.
-- **Dense Retrieval**: Vector search using sentence-transformers + FAISS.
-- **Sparse Retrieval**: BM25 keyword search.
-- **Hybrid Search**: Reciprocal Rank Fusion combining dense + sparse results.
-- **Reranking**: Cross-encoder re-ranking with quality signals.
-- **Adaptive Memory**: Learns from user feedback to improve future retrievals.
-- **Task Planning**: DAG-based parallel task execution for complex queries.
-- **MCP API**: FastAPI server exposing tools for complete RAG workflows.
+Unlike traditional RAG systems that perform naive top-k retrieval, this system uses an **intelligent policy engine** to evaluate query complexity, orchestrate multi-step retrieval strategies, and verify evidence quality before responding. It features a **Hybrid Retrieval** pipeline (Dense + Sparse), **Cross-Encoder Reranking**, and **Epistemic Safety** mechanisms to detect hallucinations.
 
-## Prerequisites
+### 🔑 Key Differentiators
+- **Adaptive Routing**: Dynamically decides between direct answers, single-step retrieval, or multi-step reasoning.
+- **Hybrid Search**: Combines semantic understanding (FAISS) with keyword precision (BM25).
+- **Epistemic Safety**: Explicitly signals confidence levels and detects contradictions in retrieved evidence.
+- **Memory Management**: Learns from past interactions to improve retrieval ranking over time.
+- **Tool Discovery**: Semantic routing to relevant tools based on user intent.
 
-Before getting started, ensure you have the following installed on your system:
+---
 
-- **Python 3.10+**: [Download Python](https://www.python.org/downloads/)
-- **Git**: [Download Git](https://git-scm.com/downloads)
-- **uv** (Recommended): A fast Python package installer and resolver.
-  - Windows: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
-  - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+## 🏗️ System Architecture
 
-## Installation
+### High-Level Architecture
+The system follows a modular architecture where the MCP Server acts as the central brain, orchestrating retrieval, reasoning, and response generation.
 
-### Option 1: Using `uv` (Recommended)
+```mermaid
+graph TD
+    %% Styling
+    classDef client fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef server fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef storage fill:#efebe9,stroke:#4e342e,stroke-width:2px;
+    classDef external fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
 
-`uv` provides a fast and reliable way to manage dependencies.
+    User([👤 User]) <-->|Interactive CLI| Client[💻 Test Chatbot Client]:::client
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd adaptive_rag_mcp
-    ```
+    subgraph System_Boundary [Adaptive RAG MCP System]
+        direction TB
+        
+        Client <-->|JSON-RPC / SSE| Connectivity[🔌 MCP Connection]
+        
+        subgraph Server_Container [Adaptive RAG Server]
+            direction TB
+            Connectivity --> Router{🧠 Policy Engine}
+            
+            Router -->|Simple Query| Direct[Direct Answer]
+            Router -->|Complex Logic| Planner[📋 Task Planner]
+            Router -->|Information Need| Tools[🛠️ Tool Executor]
+            
+            Planner --> Tools
+            
+            Tools --> Hybrid[🔎 Hybrid Retriever]
+            Hybrid -->|Dense| VectorDB[(📦 FAISS Vector Store)]:::storage
+            Hybrid -->|Sparse| KWIndex[(🗂️ BM25 Index)]:::storage
+            
+            VectorDB & KWIndex --> Reranker[⚖️ Cross-Encoder Reranker]
+            Reranker --> Memory[(🧠 Adaptive Memory)]:::storage
+        end
+    end
 
-2.  **Create a virtual environment:**
-    ```bash
-    uv venv
-    ```
+    Reranker -->|Context| LLM((🤖 Gemini 2.0 Flash)):::external
+    Direct --> LLM
+    Planner --> LLM
+```
 
-3.  **Activate the virtual environment:**
-    *   **Windows**:
-        ```powershell
-        .venv\Scripts\activate
-        ```
-    *   **macOS/Linux**:
-        ```bash
-        source .venv/bin/activate
-        ```
+---
 
-4.  **Install dependencies:**
-    ```bash
-    uv pip install -e .
-    ```
+### 🧠 Adaptive Routing Logic
+The **Policy Engine** analyzes every incoming query to determine the optimal execution path.
 
-### Option 2: Using standard `pip`
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd adaptive_rag_mcp
-    ```
-
-2.  **Create a virtual environment:**
-    ```bash
-    python -m venv .venv
-    ```
-
-3.  **Activate the virtual environment:**
-    *   **Windows**:
-        ```powershell
-        .venv\Scripts\activate
-        ```
-    *   **macOS/Linux**:
-        ```bash
-        source .venv/bin/activate
-        ```
-
-4.  **Install dependencies:**
-    ```bash
-    pip install -e .
-    ```
-
-## Configuration
-
-1.  **Create the environment file:**
-    Copy the example environment file to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    *On Windows PowerShell:* `copy .env.example .env`
-
-2.  **Edit `.env`:**
-    Open `.env` in your text editor and configure the following:
-
-    ```ini
-    # Security
-    ADAPTIVE_RAG_API_KEY=your-secret-key-change-in-production
-
-    # Server
-    HOST=0.0.0.0
-    PORT=8000
-    LOG_LEVEL=INFO
+```mermaid
+flowchart TD
+    Start([Incoming Query]) --> Analysis[Complexity Analysis]
     
-    # Optional: LLM Provider Configuration (if using generative features)
-    # GOOGLE_API_KEY=your-google-api-key
-    ```
-    *   **ADAPTIVE_RAG_API_KEY**: Set a secure key. usage clients must provide this key in the `X-API-Key` header.
+    Analysis -->|Low Complexity| Direct[Direct Answer]
+    Analysis -->|Medium Complexity| SingleStep[Single-Step Retrieval]
+    Analysis -->|High Complexity| MultiStep[Multi-Step Plan]
 
-## Running the Server
+    SingleStep --> Search[Search Tools]
+    MultiStep --> Planner[DAG Task Planner]
+    Planner --> Agents[Agent Orchestration]
 
-1.  **Start the server:**
-    Make sure your virtual environment is activated, then run:
-    ```bash
-    python -m src.server.main
-    ```
-
-2.  **Verify it's running:**
-    Open your browser or use curl to check the health endpoint:
-    ```bash
-    curl http://localhost:8000/health
-    ```
-    You should see `{"status":"ok"}`.
-
-## Usage Guide
-
-### connecting with MCP Client (e.g., Claude Desktop)
-
-To use this server with an MCP-compliant client like [Claude Desktop](https://claude.ai/download):
-
-1.  Depending on how you run the server, add the following to your MCP client configuration (e.g., `minio-config.json` or Claude's config):
-
-    ```json
-    {
-      "mcpServers": {
-        "adaptive-rag": {
-          "command": "python",
-          "args": ["-m", "src.server.main"],
-          "env": {
-            "ADAPTIVE_RAG_API_KEY": "your-configured-key"
-          }
-        }
-      }
-    }
-    ```
-    *Note: Ensure `python` points to your virtual environment python, e.g., `D:/MCP/adaptive_rag_mcp/.venv/Scripts/python.exe`.*
-
-### Direct API Usage
-
-You can interact with the server directly using `curl` or any HTTP client.
-
-#### 1. Ingest a Document
-Upload a text file or PDF to be indexed.
-```bash
-curl -X POST http://localhost:8000/tools/ingest_document \
-  -H "X-API-Key: your-secret-key-change-in-production" \
-  -d '{"text": "Retrieval Augmented Generation reduces hallucinations.", "doc_id": "rag_intro"}'
+    Search & Agents --> Scorer{Evidence Scorer}
+    
+    Scorer -->|Low Confidence| Refine[Query Refinement]
+    Refine --> Analysis
+    
+    Scorer -->|High Confidence| Generate[Response Generator]
+    Generate --> End([Final Response])
 ```
 
-#### 2. Search (Hybrid)
-Perform a search query.
-```bash
-curl -X POST http://localhost:8000/tools/search \
-  -H "X-API-Key: your-secret-key-change-in-production" \
-  -d '{"query": "benefits of RAG", "mode": "hybrid", "k": 3}'
-```
+---
 
-#### 3. Rerank Results
-Improve ranking of retrieved documents.
-```bash
-curl -X POST http://localhost:8000/tools/rerank \
-  -H "X-API-Key: your-secret-key-change-in-production" \
-  -d '{
-    "query": "benefits of RAG",
-    "documents": [
-        {"id": "doc1", "content": "RAG improves accuracy."},
-        {"id": "doc2", "content": "Bananas are yellow."}
-    ]
-  }'
-```
+## 📂 Folder Structure
 
-## Troubleshooting
-
-- **`ModuleNotFoundError`**: Ensure you have activated the virtual environment and installed dependencies (`pip install -e .`).
-- **`403 Forbidden`**: Check that the `X-API-Key` header in your request matches the `ADAPTIVE_RAG_API_KEY` in your `.env` file.
-- **Port Conflict**: If port 8000 is in use, change the `PORT` variable in `.env`.
-
-## Production-Grade Features
-
-This server follows [MCP Best Practices](https://modelcontextprotocol.io/) for production deployments:
-
-### Tool Annotations
-
-All tools include MCP annotations to help clients understand tool behavior:
-
-| Annotation | Description |
-|------------|-------------|
-| `readOnlyHint` | Tool does not modify state |
-| `destructiveHint` | Tool may perform destructive operations |
-| `idempotentHint` | Repeated calls have no additional effect |
-| `openWorldHint` | Tool interacts with external services |
-
-### Security Configuration
-
-```ini
-# .env security settings
-ENVIRONMENT=production              # Enable production mode
-ADAPTIVE_RAG_API_KEY=<secure-key>  # MUST change from default!
-HOST=127.0.0.1                      # Bind to localhost (safer)
-CORS_ALLOW_ALL=false                # Restrict CORS origins
-CORS_ORIGINS=["https://your-app.com"]
-```
-
-### Pagination
-
-List endpoints support pagination:
+The project is structured for scalability and maintainability.
 
 ```bash
-curl -X POST http://localhost:8000/tools/list_documents \
-  -H "X-API-Key: your-key" \
-  -d '{"limit": 20, "offset": 0}'
+adaptive_rag_mcp/
+├── src/
+│   ├── server/             # FastAPI & MCP Server Core
+│   │   ├── main.py         # Entry point
+│   │   └── tools/          # Tool definitions (Executor, Schemas)
+│   ├── policy/             # Intelligent Routing & Decision Logic
+│   │   ├── engine.py       # Complexity analysis engine
+│   │   └── tool_discovery.py # Semantic tool routing
+│   ├── retrieval/          # Search functionality
+│   │   ├── hybrid.py       # BM25 + Vector fusion
+│   │   ├── vector_store.py # FAISS implementation
+│   │   ├── reranker.py     # Cross-encoder reranking
+│   │   ├── sparse_retriever.py # BM25 implementation
+│   │   ├── adaptive_memory.py # Learning from feedback
+│   │   └── components/     # Low-level utilities
+│   ├── ingestion/          # Document processing & PDF loaders
+│   └── impl/               # Interface implementations
+├── data/                   # Persistent storage (Vector DB, Indices)
+├── tests/                  # Pytest suite
+└── Dockerfile              # Production containerization
 ```
 
-Response includes pagination metadata:
-```json
-{
-  "documents": [...],
-  "pagination": {
-    "total": 150,
-    "count": 20,
-    "offset": 0,
-    "has_more": true,
-    "next_offset": 20
-  }
-}
+---
+
+## 🧩 Component Breakdown
+
+### 1. MCP Server (`src/server`)
+Implements the Model Context Protocol using `fastmcp`. It exposes tools and resources types to clients (like Claude Desktop or custom chatbots) via standardized JSON-RPC over SSE (Server-Sent Events).
+
+### 2. Adaptive Router (`src/policy`)
+Uses a lightweight LLM call to classify queries into complexity bands:
+- **Direct**: No retrieval needed (e.g., "Hello").
+- **Retrieval**: Needs external data (e.g., "Summarize this PDF").
+- **Reasoning**: Needs multi-step planning (e.g., "Compare X and Y and suggest Z").
+
+### 3. Hybrid Retriever (`src/retrieval`)
+Combines two search strategies best-of-breed results:
+- **Dense Retrieval (FAISS)**: Captures semantic meaning (e.g., "machine learning types" ≈ "supervised/unsupervised").
+- **Sparse Retrieval (BM25)**: Captures exact keyword matches (e.g., acronyms, specific IDs).
+
+### 4. Reranking & Compression
+- **Cross-Encoder**: Re-scores top candidates using a high-accuracy transformer model to ensure relevance.
+- **Context Compressor**: Removes redundant or irrelevant text segments to fit within the LLM's context window efficiently.
+
+### 5. Memory Manager (`adaptive_memory.py`)
+Tracks successful retrievals. If a specific document chunk was useful for a past query, it gets a "boost" in future similar searches, allowing the system to learn over time.
+
+---
+
+## 🛠️ Setup Instructions
+
+### Prerequisites
+- Python 3.10+
+- Docker
+- Gemini API Key
+
+### 1. Environment Setup
+Create a `.env` file in the root `adaptive_rag_mcp` folder:
+```env
+GEMINI_API_KEY=your_gemini_key_here
+LOG_LEVEL=INFO
 ```
 
-### Enhanced Error Responses
-
-Errors include actionable suggestions:
-
-```json
-{
-  "error_code": "TOOL_NOT_FOUND",
-  "message": "Tool 'serch' not found",
-  "suggestion": "Did you mean: search? Use GET /tools to list all available tools.",
-  "details": {"requested_tool": "serch"}
-}
-```
-
-### Code Quality
-
-Install dev dependencies and run quality checks:
+### 2. Run with Docker (Recommended)
+Build and run the MCP server in a container.
 
 ```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+# Build the image
+docker build -t adaptive-rag .
 
-# Run code quality checks
-black --check src/ tests/
-isort --check-only src/ tests/
-ruff check src/ tests/
-mypy src/
+# Run the container
+docker run -d -p 8000:8000 --env-file .env --name adaptive-rag-server adaptive-rag
 ```
 
-### MCP Evaluation Suite
-
-Test the server's LLM effectiveness:
-
+### 3. Run Locally (Development)
 ```bash
-python scripts/run_evaluation.py tests/evaluation.xml -u http://localhost:8000
+# Install dependencies using uv
+uv sync
+
+# Activate virtual environment
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+
+# Start the server
+python -m src.server.main
 ```
 
-
-## Deployment & Remote Usage
-
-If you want to use this MCP server from another device (e.g., accessing your customized RAG server from a laptop), you have two options:
-
-### Option 1: Install on the Target Device
-Simply follow the **Installation** instructions above on the new device. This allows you to run a completely independent instance of the server.
-
-### Option 2: Access Remotely via Network
-You can run the server on one machine (Host) and access it from another (Client).
-
-1.  **Configure Host**:
-    Ensure your `.env` file has `HOST=0.0.0.0`. This binds the server to all network interfaces, not just localhost.
-    ```ini
-    HOST=0.0.0.0
-    ```
-
-2.  **Get Host IP**:
-    Find the local IP address of your host machine (e.g., `ipconfig` on Windows or `ifconfig` on Linux). Let's say it is `192.168.1.15`.
-
-3.  **Access from Client**:
-    You can now send requests to the host's IP address.
-    ```bash
-    curl -X POST http://192.168.1.15:8000/tools/search \
-      -H "X-API-Key: your-secret-key" \
-      -d '{"query": "hello"}'
-    ```
-
-    *Note: Ensure your host's firewall allows incoming connections on port 8000.*
-
-## Architecture Overview
-
+### 4. Running the Test Chatbot
+Navigate to the sibling `test chatbot` directory:
+```bash
+cd ../test\ chatbot
+uv sync
+python src/chatbot.py
 ```
-src/
-├── ingestion/     # Document loading, chunking, storage
-├── retrieval/     # Embeddings, vector search, BM25, reranking, task planning
-├── policy/        # Policy engine for tool discovery
-├── server/        # FastAPI, auth, logging, tool execution
-└── sdk/           # Python SDK for client interaction
+*Note: Ensure the chatbot's `.env` points to the running MCP server URL.*
+
+---
+
+## 🔄 Retrieval Pipeline Diagram
+
+```mermaid
+graph TD
+    Query[User Query] --> Embed[Embedder] & Keyword[Keyword Extractor]
+    
+    Embed -->|Vector| FAISS[FAISS Index]
+    Keyword -->|Tokens| BM25[BM25 Index]
+    
+    FAISS --> ResultsA[Semantic Results]
+    BM25 --> ResultsB[Keyword Results]
+    
+    ResultsA & ResultsB --> Merger[Rank Fusion]
+    Merger --> Reranker[Cross-Encoder Reranker]
+    Reranker --> TopK[Top-K High Quality Docs]
+    TopK --> Compressor[Context Compressor]
+    Compressor --> Final[Optimized Context]
 ```
 
-## License
+---
 
-MIT
+## 💡 Example Query Flow
+
+**User Question**: *"What are the safety protocols mentioned in the Q2 report?"*
+
+1.  **Ingestion**: Server receives the query.
+2.  **Policy**: Engine determines **Medium Complexity** (requires retrieval). - *Route: Retrieval*
+3.  **Search**:
+    *   **Vector**: Finds chunks semantically related to "safety protocols", "security".
+    *   **BM25**: Finds chunks with exact text "Q2 report", "safety".
+4.  **Reranking**: The system merges 20 results, reranks them, and selects the top 5 most relevant.
+5.  **Reasoning**: LLM analyzes the 5 chunks.
+6.  **Response**: *"The Q2 report outlines three key safety protocols: 1. Mandatory PPE... 2. Hourly checks..."*
+
+---
+
+## 🔮 Advanced Capabilities
+
+*   **Self-Corrective RAG**: If the retrieved documents don't answer the question (low confidence score), the system automatically triggers a **Query Expansion** step to try finding better information.
+*   **Hallucination Detection**: The `EpistemicSafety` module checks for contradictions between the generated answer and the source documents.
+*   **Long-Context Optimization**: Uses smart summarization to compress broad contexts into essential facts before feeding them to the generation model.
+
+## 🗺️ Future Roadmap
+
+- [ ] **GraphRAG Integration**: adding Knowledge Graph traversal for deep reasoning.
+- [ ] **Multi-Modal Support**: Ingesting and retrieving images/charts from PDFs.
+- [ ] **Streaming Responses**: Full token streaming support for the chatbot interface.
+- [ ] **User Auth**: Adding OAuth2 for secure multi-user environments.
+
+---
+
+**Built for High-Performance AI Systems.**

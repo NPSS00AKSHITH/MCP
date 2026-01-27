@@ -1,254 +1,134 @@
 # Adaptive RAG Test Chatbot
 
-Interactive chatbot that demonstrates the Adaptive RAG MCP Server with PDF loading capabilities.
+A production-grade CLI Chatbot designed to interact with the **Adaptive RAG MCP Server**. This tool allows you to:
+1.  **Ingest Documents**: Upload PDFs and text files to the MCP knowledge base.
+2.  **Test Retrieval**: Verify the hybrid search (Dense + Sparse) and reranking.
+3.  **End-to-End Q&A**: Ask complex questions to test the Adaptive RAG pipeline.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.12+
-- Docker (for running the MCP server)
-- Gemini API key
+### 1. Prerequisites
+*   **Python 3.10+**
+*   **MCP Server Running** (See `../adaptive_rag_mcp/README.md`)
+*   **Gemini API Key** (for local answer generation)
 
-### 1. Setup Environment
+### 2. Installation
+Navigate to the `test chatbot` directory and install dependencies:
 
 ```bash
-# Clone or navigate to this directory
 cd "D:\MCP\test chatbot"
 
-# Create/activate virtual environment
-uv venv
-.venv\Scripts\activate.ps1
-
-# Install dependencies
-uv pip install -e .
+# Using uv (Recommended)
+uv sync
 ```
 
-### 2. Configure API Keys
+### 3. Configuration
+Create a `.env` file in `D:\MCP\test chatbot\` (copy from example if available):
 
-Create/update `.env` file:
-```env
-ADAPTIVE_RAG_API_KEY=<your-mcp-api-key>
-GEMINI_API_KEY=<your-gemini-api-key>
+```ini
+# Chatbot Configuration
+GEMINI_API_KEY=your_gemini_key_here
 MCP_SERVER_URL=http://localhost:8000
 ```
 
-Get Gemini API key from: https://aistudio.google.com/apikey
-
-### 3. Start MCP Server
-
-```bash
-# Navigate to adaptive_rag_mcp directory
-cd D:\MCP\adaptive_rag_mcp
-
-# Start via Docker
-docker run -d -p 8000:8000 --env-file .env --name adaptive-rag-server adaptive-rag
-
-# Verify it's running
-docker ps | grep adaptive-rag-server
-```
-
-### 4. Run Chatbot
+### 4. Running the Chatbot
+Activate the environment and start the CLI:
 
 ```bash
-cd "D:\MCP\test chatbot"
-.venv\Scripts\activate.ps1
+# Windows
+.venv\Scripts\activate
 python src/chatbot.py
-```
 
----
-
-## 📚 Usage
-
-### Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/load <path>` | Load PDF into knowledge base | `/load data/document.pdf` |
-| `/list` | List all loaded documents | `/list` |
-| `/stats` | Show ingestion statistics | `/stats` |
-| `/help` | Display help message | `/help` |
-| `/quit` | Exit the chatbot | `/quit` |
-
-### Ask Questions
-
-Just type your question and press Enter:
-```
-You: What are the types of machine learning?
-🤖 The three types are supervised, unsupervised, and reinforcement learning...
+# Mac/Linux
+source .venv/bin/activate
+python src/chatbot.py
 ```
 
 ---
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────┐
-│  Chatbot (src/chatbot.py)               │
-│  • Gemini 2.5 Flash for Q&A             │
-│  • Client-side PDF extraction (pypdf)   │
-│  • HTTP client for MCP communication    │
-└──────────────┬──────────────────────────┘
-               │ HTTP REST API (port 8000)
-               ▼
-┌─────────────────────────────────────────┐
-│  Adaptive RAG MCP Server (Docker)       │
-│  • Document ingestion & indexing        │
-│  • Hybrid vector search (FAISS)         │
-│  • Adaptive retrieval policy            │
-│  • Evidence scoring & reranking         │
-└─────────────────────────────────────────┘
-```
+The chatbot acts as a **smart client** that connects to the MCP Server over HTTP/SSE.
 
-### How It Works
-
-1. **User asks a question** → Gemini decides if it needs external knowledge
-2. **If yes:** Chatbot searches MCP server with query  
-   - MCP server performs hybrid search (dense + sparse)
-   - Retrieves top-k relevant chunks
-3. **Retrieved context** is sent to Gemini
-4. **Gemini generates answer** based on the context
-
----
-
-## 🧪 Testing
-
-### Generate Sample PDF
-
-```bash
-python scripts/generate_sample_pdf.py
-# Creates: data/machine_learning_basics.pdf
-```
-
-### Test Workflow
-
-```
-You: /load data/machine_learning_basics.pdf
-✅ Loaded! Doc ID: machine_learning_basics.pdf, Chunks: 2
-
-You: What are the three types of machine learning?
-🤖 The three types are...
-
-You: /stats
-📊 Docs: 1, Chunks: 2
-```
-
-See [`TEST_RESULTS.md`](docs/TEST_RESULTS.md) for comprehensive test results.
-
----
-
-## 📂 Project Structure
-
-```
-test chatbot/
-├── src/
-│   └── chatbot.py                # Main chatbot application
-├── scripts/
-│   ├── generate_sample_pdf.py    # PDF generator for testing
-│   ├── verify_search.py          # MCP search verification script
-│   └── debug_server.py           # Server debugging utility
-├── data/                         # Data files (PDFs, TXT)
-│   └── machine_learning_basics.pdf
-├── docs/                         # Documentation
-│   └── TEST_RESULTS.md           # Test validation report
-├── .env                          # Environment variables
-└── pyproject.toml                # Project dependencies
+```mermaid
+graph TD
+    User([👤 User]) -->|Commands / Questions| Chatbot[💻 CLI Application]
+    
+    subgraph Client_Side [Chatbot Logic]
+        Chatbot -->|Local Processing| PDF[📄 PDF Extractor]
+        Chatbot -->|LLM Inference| Gemini((🤖 Gemini 2.0 Flash))
+    end
+    
+    subgraph Server_Side [Adaptive RAG MCP]
+        Chatbot <-->|HTTP JSON-RPC| Server[🌍 MCP Server]
+        Server -->|Ingest/Search| KnowledgeBase[(📚 Knowledge Base)]
+    end
 ```
 
 ---
 
-## 🔧 Dependencies
+## 🧪 Testing Workflow
 
-Defined in `pyproject.toml`:
-- `google-generativeai` - Gemini LLM integration
-- `mcp` - MCP protocol client
-- `pypdf` - PDF text extraction
-- `httpx` - HTTP client for MCP server
-- `python-dotenv` - Environment variable management
-- `reportlab` - PDF generation for testing
+### Scenario: Ingesting a PDF
+You can test the system by generating a sample PDF and asking questions about it.
 
----
+1.  **Generate Sample Data**:
+    ```bash
+    python scripts/generate_sample_pdf.py
+    # Creates data/machine_learning_basics.pdf
+    ```
 
-## 🐛 Troubleshooting
+2.  **Start Chatbot**:
+    ```bash
+    python src/chatbot.py
+    ```
 
-### "Cannot connect to MCP server"
-```bash
-# Check if server is running
-docker ps | grep adaptive-rag
+3.  **Run Commands**:
+    ```text
+    > /load data/machine_learning_basics.pdf
+    ✅ Successfully ingested 'machine_learning_basics.pdf' (Chunked into 5 parts).
 
-# If not, start it
-cd D:\MCP\adaptive_rag_mcp
-docker run -d -p 8000:8000 --env-file .env --name adaptive-rag-server adaptive-rag
-
-# Check logs
-docker logs adaptive-rag-server
-```
-
-### "No module named 'pypdf'"
-```bash
-# Activate venv and install dependencies
-.venv\Scripts\activate.ps1
-pip install pypdf httpx
-```
-
-### "API key was reported as leaked"
-```bash
-# Get new key from Google AI Studio
-# Update .env file with new GEMINI_API_KEY
-```
-
-### "404 Not Found" or tool errors
-```bash
-# Verify MCP server is running and accessible
-curl http://localhost:8000/health
-
-# Check available tools
-curl -H "X-API-Key: <your-key>" http://localhost:8000/tools
-```
+    > What are the three types of machine learning?
+    🤖 [Thinking]... Retrieving context from MCP...
+    
+    Based on the document, the three types are:
+    1. Supervised Learning
+    2. Unsupervised Learning
+    3. Reinforcement Learning
+    ```
 
 ---
 
-## 🚀 Next Steps
+## 📚 Command Reference
 
-### Planned Enhancements
-
-1. **Comprehensive Test Suite Integration**
-   - Add tests from comprehensive adaptive test suite
-   - Validate policy decisions, confidence thresholds
-   - Test safety mechanisms (contradictions, refusals)
-
-2. **Upgrade to MCP SDK**
-   - Replace HTTP client with proper MCP protocol
-   - Use `mcp.ClientSession` for better compliance
-
-3. **Enhanced Observability**
-   - Log policy decisions and confidence scores
-   - Track iteration counts and strategy switches
-   - Add performance metrics
-
-4. **Update Dependencies**
-   - Migrate from `google.generativeai` to `google.genai`
-   - Update to latest MCP client version
-
-5. **Advanced Features**
-   - Multi-document comparison
-   - Citation generation
-   - Persistent conversation history
-   - Batch PDF processing
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `/load <path>` | Ingests a local PDF or Text file into the MCP server. | `/load ./data/report.pdf` |
+| `/list` | Lists all documents currently indexed in the server. | `/list` |
+| `/stats` | Displays server-side ingestion and retrieval statistics. | `/stats` |
+| `/clear` | Clears the current conversation history. | `/clear` |
+| `/quit` | Exits the application. | `/quit` |
 
 ---
 
-## 📖 Related Documentation
+## 🔧 Troubleshooting
 
-- [MCP Integration Guide](../adaptive_rag_mcp/MCP_INTEGRATION_GUIDE.md)
-- [Project Explained](../adaptive_rag_mcp/PROJECT_EXPLAINED.md)
-- [Test Results](TEST_RESULTS.md)
+### "Connection Refused"
+*   **Cause**: The MCP Server is not running.
+*   **Fix**: 
+    1.  Open a new terminal.
+    2.  Go to `../adaptive_rag_mcp`.
+    3.  Run `docker run -p 8000:8000 ...` or `python -m src.server.main`.
+
+### "API Key Invalid"
+*   **Cause**: `GEMINI_API_KEY` is missing or incorrect.
+*   **Fix**: Check your `.env` file in the `test chatbot` directory.
+
+### "No module named..."
+*   **Cause**: Virtual environment not activated.
+*   **Fix**: Run `.venv\Scripts\activate` (Windows) or `source .venv/bin/activate` (Mac/Linux).
 
 ---
 
-## 📄 License
-
-Part of the Adaptive RAG MCP Server project.
-
----
-
-**Status:** ✅ Functional - Successfully tested with PDF loading and RAG Q&A
+## 📝 License
+MIT
